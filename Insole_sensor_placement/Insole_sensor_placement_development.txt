@@ -1,0 +1,30 @@
+The aim of this project is to find the corresponding location of sensors from force plate, and wearable device (smart insole). 
+It will also map the 3D scanned foot plantar area to the insole. 
+The base location or coordinate is based on the plot from Gensole. 
+All the other datasets will be mapped to the insole area and derived the coordinate of sensor position.
+
+The result of this project is to process the data from devices so that they are match to the insole area for further deep learning training.
+The other result is to find the optimise the sensor placement of wearable device so that 16 FSR can capture as much info as possible.
+
+1. Insole area process
+    1.1 Use AutoCAD to modify the Gensole plot to generate a set of insole with different sizes according to Insole Size guide from insoles.com.
+        The output is a polyline of the edge of insole. The output will be saved as png files with dimension 640*640.
+    1.2 Using Python script to convert the png files into csv files with 640 lines and 640 columns. 
+        The edge line as well as enclosure area will be labelled as 1, the background area will be labelled as 0.
+
+2. Force plate data process
+    2.1 Using python script to pre-process csv datasheet from E-mat.
+        Seperate left and right foot from a 98*64 csv file
+        Keep the scale and refill the left and right images to dimension of 64*64, and save as both csv files.
+        Resize the csv files to 640*640, each cell of csv will be come same value of 10*10 cells.
+        Convert the csv files into png files.
+    2.2 Keep the scale and adjust the position and angle of the png files, so that the maximum points are fall into the area of insole.
+        Save the bias of x, y and the rotation angle
+        Save png files into csv files, so that the data from force plate will have new coordinates.
+
+3. 3D scanned model process
+
+4. Wearable device data process
+    4.1 Using anatomy method to locate the sensor placement position and the coordinate.
+    4.2 Using down sampling method to locate the sensor place.
+    4.3 Design deep learning methods to find the optimal sensor placement.

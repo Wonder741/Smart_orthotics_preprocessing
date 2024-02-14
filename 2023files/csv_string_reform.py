@@ -17,7 +17,11 @@ def process_file(file_path, destination_folder):
     """
     data = read_and_trim_csv(file_path)
     processed_data = [process_string(row[0]) for row in data]
-    save_processed_data(processed_data, file_path, destination_folder)
+    processed_data1 = chunk_and_skip(processed_data, 98)
+    save_processed_data(processed_data1, file_path, destination_folder)
+
+def chunk_and_skip(data, chunk_size):
+    return [item for i, block in enumerate([data[i:i+chunk_size] for i in range(0, len(data), chunk_size)]) for j, item in enumerate(block) if j != 0]
 
 def read_and_trim_csv(file_path):
     """
@@ -60,8 +64,8 @@ def save_processed_data(data, original_file_path, destination_folder):
 
 
 # Paths
-input_dir = 'D:\\A\\Data\\Experiment data\\Statics\\A'
-output_dir = 'D:\\A\\Data\\Experiment data\\Statics\\B'
+input_dir = 'D:\\A\\Data\\Experiment data\\0123\\Converted\\New folder\\Converted data'
+output_dir = 'D:\\A\\Data\\Experiment data\\0123\\Processed'
 
 # Create output directories if they don't exist
 os.makedirs(input_dir, exist_ok=True)
