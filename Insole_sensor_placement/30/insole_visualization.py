@@ -1,41 +1,63 @@
 import pandas as pd
+import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
-from matplotlib.patches import Circle
 from PIL import Image
-import matplotlib.cm as cm
+import matplotlib
+
+# Function to create a radial gradient
+def create_radial_gradient(center_color, radius):
+    y, x = np.ogrid[-radius:radius+1, -radius:radius+1]
+    distance = np.sqrt(x**2 + y**2)
+
+    max_distance = np.max(distance)
+    normalized_distance = distance / max_distance
+
+    gradient = np.ones((2*radius+1, 2*radius+1, 4))
+    for i in range(3):
+        gradient[:, :, i] = center_color[i] + (1 - center_color[i]) * normalized_distance
+
+    gradient = np.clip(gradient, 0, 1)
+    return gradient
 
 # Load the background image
 bg_image = Image.open("background.png")
 
-# Load the data and coordinates
-data_df = pd.read_csv("data.csv")
-coord_df = pd.read_csv("coordinates.csv").iloc[0:17]  # Skip the header
+# Load the coordinates
+coord_df = pd.read_csv("coordinates.csv").iloc[1:18]
 
 # Set up the plot
 fig, ax = plt.subplots()
 ax.imshow(bg_image, extent=[0, 640, 0, 640])
+ax.set_xlim(0, 640)
+ax.set_ylim(0, 640)
 
 # Create a colormap
-cmap = cm.get_cmap('jet')
+cmap = matplotlib.colormaps['jet']
 
-# Create circles for each area
-circles = []
+# Define the new radius
+new_radius = 15
+
+# Create gradient images for each area
+gradient_images = []
 for _, row in coord_df.iterrows():
-    circle = Circle((row['x'], row['y']), 30, color='red', alpha=0.5)
-    ax.add_patch(circle)
-    circles.append(circle)
+    center_color = cmap(np.random.rand())[:3]
+    gradient = create_radial_gradient(center_color, new_radius)
+    gradient_image = ax.imshow(gradient, extent=[row['x']-new_radius, row['x']+new_radius, row['y']-new_radius, row['y']+new_radius], zorder=2)
+    gradient_images.append(gradient_image)
 
 # Update function for animation
 def update(frame):
-    for i, circle in enumerate(circles):
-        # Map the data value to a color
-        value = data_df.iloc[frame, i + 1] / 1024  # Normalize to 0-1
-        color = cmap(value)
-        circle.set_color(color)
-    return circles
+    data_df = pd.read_csv("data.csv")  # Reload the data
+    latest_data = data_df.iloc[-1]  # Get the latest row
+    for i, gradient_image in enumerate(gradient_images):
+        value = latest_data[i + 1] / 1024
+        center_color = cmap(value)[:3]
+        gradient = create_radial_gradient(center_color, new_radius)
+        gradient_image.set_data(gradient)
+    return gradient_images
 
 # Create the animation
-ani = FuncAnimation(fig, update, frames=len(data_df), interval=500, blit=True)
+ani = FuncAnimation(fig, update, interval=500, blit=True)
 
 plt.show()
