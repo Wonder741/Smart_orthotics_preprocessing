@@ -58,6 +58,6 @@ def update(frame):
     return gradient_images
 
 # Create the animation
-ani = FuncAnimation(fig, update, interval=500, blit=True)
+ani = FuncAnimation(fig, update, interval=500, blit=True, cache_frame_data=False)
 
 plt.show()
