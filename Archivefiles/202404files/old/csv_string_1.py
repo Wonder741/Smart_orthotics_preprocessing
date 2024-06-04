@@ -70,9 +70,9 @@ def save_processed_data(data, original_file_path, destination_folder):
 
 
 # Paths
-index = '001'
-input_dir = 'D:\\A\\1 InsoleDataset\\WMT\\ConvertedRaw\\' + index
-output_dir = 'D:\\A\\1 InsoleDataset\\WMT\\StringProcessed\\' + index
+index = '002'
+input_dir = 'D:\\A\\A_Process_data\\WATMat\\1Raw\\' + index
+output_dir = 'D:\\A\\A_Process_data\\WATMat\\2StringProcessed\\' + index
 
 # Create output directories if they don't exist
 os.makedirs(input_dir, exist_ok=True)
@@ -80,5 +80,6 @@ os.makedirs(output_dir, exist_ok=True)
 
 # Example usage
 process_csv_files(input_dir, output_dir)
+print("Process complete")
 
 

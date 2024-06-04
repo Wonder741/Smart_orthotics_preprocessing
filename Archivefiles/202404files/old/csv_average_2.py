@@ -34,9 +34,31 @@ def save_to_csv_and_png(frame, base_name, csv_dir, png_dir):
     csv_path = os.path.join(csv_dir, f"{base_name}.csv")
     png_path = os.path.join(png_dir, f"{base_name}.png")
     pd.DataFrame(frame).to_csv(csv_path, index=False, header=False)
-    resized_frame = np.kron(frame, np.ones((10, 10)))
-    norm_frame = np.interp(resized_frame, (resized_frame.min(), resized_frame.max()), (0, 255)).astype(np.uint8)
+    norm_frame = np.interp(frame, (0, 1024), (0, 255)).astype(np.uint8)
     img = Image.fromarray(norm_frame)
+    img.save(png_path)
+
+def resize_png(frame, base_name, png_dir):
+    os.makedirs(png_dir, exist_ok=True)
+    # Create a new array for the resized frame
+    resized_frame = np.zeros((640, 640), dtype=np.uint8)
+
+    # Normalize the non-zero elements of the original frame
+    non_zero_elements = frame[frame != 0]
+    normalized_elements = np.interp(non_zero_elements, (0, 1023), (1, 255)).astype(np.uint8)
+
+    # Resize the frame
+    idx = 0
+    for i in range(0, 640, 10):
+        for j in range(0, 640, 10):
+            if frame[i // 10][j // 10] != 0:
+                center_i, center_j = i + 3, j + 3  # 4x4 center
+                resized_frame[center_i:center_i + 4, center_j:center_j + 4] = normalized_elements[idx]
+                idx += 1
+
+    # Save the resized frame as a grayscale PNG
+    png_path = os.path.join(png_dir, f"{base_name}.png")
+    img = Image.fromarray(resized_frame)
     img.save(png_path)
 
 def process_all_files(source_dir, left_csv_dir, right_csv_dir, left_png_dir, right_png_dir):
@@ -53,14 +75,19 @@ def process_all_files(source_dir, left_csv_dir, right_csv_dir, left_png_dir, rig
                 right_frame = np.vstack((np.zeros((16, right_frame.shape[1])), right_frame))
                 save_to_csv_and_png(left_frame, f"{base_name}_left", left_csv_dir, left_png_dir)
                 save_to_csv_and_png(right_frame, f"{base_name}_right", right_csv_dir, right_png_dir)
+                resize_png(left_frame, f"{base_name}_left", left_resize_png_dir)
+                resize_png(right_frame, f"{base_name}_right", right_resize_png_dir)
 
 # Define your directories
-index = '009'
-source_dir = 'D:\\A\\1 InsoleDataset\\WMT\\StringProcessed\\' + index
-left_csv_dir = 'D:\\A\\1 InsoleDataset\\WMT\\Averaged\\LeftCSV\\' + index
-right_csv_dir = 'D:\\A\\1 InsoleDataset\\WMT\\Averaged\\RightCSV\\' + index
-left_png_dir = 'D:\\A\\1 InsoleDataset\\WMT\\Averaged\\LeftPNG\\' + index
-right_png_dir = 'D:\\A\\1 InsoleDataset\\WMT\\Averaged\\RightPNG\\' + index
+index = '001'
+source_dir = 'D:\\A\\A_Process_data\\WATMat\\2StringProcessed\\' + index
+left_csv_dir = 'D:\\A\\A_Process_data\\WATMat\\3Averaged\\LeftCSV\\' + index
+right_csv_dir = 'D:\\A\\A_Process_data\\WATMat\\3Averaged\\RightCSV\\' + index
+left_png_dir = 'D:\\A\\A_Process_data\\WATMat\\3Averaged\\LeftPNG\\' + index
+right_png_dir = 'D:\\A\\A_Process_data\\WATMat\\3Averaged\\RightPNG\\' + index
+left_resize_png_dir = 'D:\\A\\A_Process_data\\WATMat\\3Averaged\\LeftResizePNG\\' + index
+right_resize_png_dir = 'D:\\A\\A_Process_data\\WATMat\\3Averaged\\RightResizePNG\\' + index
 
 # Process all CSV files individually and save results
 process_all_files(source_dir, left_csv_dir, right_csv_dir, left_png_dir, right_png_dir)
+print("Process complete")
