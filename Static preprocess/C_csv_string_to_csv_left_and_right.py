@@ -4,15 +4,16 @@ import pandas as pd
 import numpy as np
 from PIL import Image
 
-index = '35wengyu'
+index = '33anson'
 
-def append_to_csv(csv_path, file_index, max_z):
+def append_to_csv(csv_path, file_index, max_z, mean_z):
     try:
         # Convert max_z to an integer
         max_z_integer = int(max_z)
+        mean_z_integer = int(mean_z)
         
         # Create a single row with the file name and max_z_integer
-        csv_data = [os.path.basename(file_index), max_z_integer]
+        csv_data = [os.path.basename(file_index), max_z_integer, mean_z_integer]
         
         # Append the row to the CSV file
         with open(csv_path, 'a', newline='') as csvfile:
@@ -95,10 +96,14 @@ def calculate_average(frames):
     if frames:
         mean_frame = np.mean(frames, axis=0).astype(int)
         max_value = mean_frame.max()
-        #print(max_value)
-        return mean_frame, max_value
+        non_zero_elements = mean_frame[mean_frame != 0]
+        if non_zero_elements.size > 0:
+            non_zero_mean_value = non_zero_elements.mean()
+        else:
+            non_zero_mean_value = 0  # Handle case where there are no non-zero elements
+        return mean_frame, max_value, non_zero_mean_value
     else:
-        return np.array([])  # Return an empty array if no frames
+        return np.array([]), None, None  # Return an empty array if no frames
     
 def save_to_csv_and_png(frame, base_name, csv_dir, png_dir):
     os.makedirs(csv_dir, exist_ok=True)
@@ -151,14 +156,14 @@ def main(index):
             # Applying the conversion to each element in each row of data_skip_line
             cleaned_data = [[convert_if_numeric(item) for item in row] for row in data_skip_line]
             frames = frame_data(cleaned_data)
-            avg_frame, max_value = calculate_average(frames)
+            avg_frame, max_value, mean_value = calculate_average(frames)
             if avg_frame.size > 0:
                 left_frame = avg_frame[:48, :]
                 right_frame = avg_frame[48:, :]
                 left_frame = np.vstack((left_frame, np.zeros((16, left_frame.shape[1]))))
                 right_frame = np.vstack((np.zeros((16, right_frame.shape[1])), right_frame))
-                append_to_csv(csv_result, f"left_{basename}", max_value)
-                append_to_csv(csv_result, f"right_{basename}", max_value)
+                append_to_csv(csv_result, f"left_{basename}", max_value, mean_value)
+                append_to_csv(csv_result, f"right_{basename}", max_value, mean_value)
                 save_to_csv_and_png(left_frame, f"left_{basename}", left_csv_dir, left_png_dir)
                 save_to_csv_and_png(right_frame, f"right_{basename}", right_csv_dir, right_png_dir)
             file_number += 1
@@ -166,3 +171,4 @@ def main(index):
 
 if __name__ == '__main__':
     main(index)
+    print("C process complete")

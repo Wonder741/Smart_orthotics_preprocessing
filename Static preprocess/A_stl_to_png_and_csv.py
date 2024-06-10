@@ -133,7 +133,7 @@ def process_files_in_directory(index, file_dir, csv_name):
             # Process STL to point cloud and to grayscale image
             stl_to_point_cloud_1(mesh_data, point_cloud_path)
             processed_image, max_z = generate_grayscale_image(point_cloud_path, image_output_path)
-            print(f"Processed {filename} and saved image to {image_output_path}")
+            #print(f"Processed {filename} and saved image to {image_output_path}")
             append_to_csv(csv_path, os.path.splitext(new_file_name)[0], max_z)
 
 
@@ -163,10 +163,10 @@ def stl_to_point_cloud_1(mesh_data, output_file_path, points_per_unit_area=10):
         for point in all_points:
             out_file.write(f"{point[0]} {point[1]} {point[2]}\n")
     
-    print(f"Saved point cloud with {len(all_points)} points to {output_file_path}")
+    #print(f"Saved point cloud with {len(all_points)} points to {output_file_path}")
 
 # Define input and output directories
-index = "35wengyu"
+index = "33anson"
 file_directory = 'D:\\A\\A_Process_data\\3DScan'
 csv_file_name = "scan_process_result.csv"
 

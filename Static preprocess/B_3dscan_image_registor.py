@@ -22,17 +22,17 @@ def align_centers(points_mask):
     frame_center = calculate_centroid_of_white_mask(points_mask)
 
     # Calculate the center of the object mask
-    object_center = (32, 32)
+    image_center = (32, 32)
 
     # Calculate the translation needed to move the frame center to the object center
-    translation = np.array(object_center) - np.array(frame_center)
+    translation = np.array(image_center) - np.array(frame_center)
 
     # Apply the translation to the points mask
     rows, cols = points_mask.shape
     M = np.float32([[1, 0, translation[0]], [0, 1, translation[1]]])
     aligned_points_mask = cv2.warpAffine(points_mask, M, (cols, rows))
 
-    return aligned_points_mask, translation, object_center
+    return aligned_points_mask, translation, image_center
 
 # Rotated the aligned point image based on image center, find the optimal angle that have the maximum overlap with the object mask
 def test_rotation(object_mask, aligned_points_mask, rotation_center):
@@ -40,24 +40,30 @@ def test_rotation(object_mask, aligned_points_mask, rotation_center):
     max_overlap = 0
     best_angle = 0
     optimal_rotate_image = None
+    a = np.sum((aligned_points_mask) > 0)
 
     for angle in range(0, 360, 1):  # Rotate from 0 to 180 degrees in steps of 10
         M = cv2.getRotationMatrix2D(rotation_center, angle, 1)
-        rotated_points = cv2.warpAffine(aligned_points_mask, M, (cols, rows))
+        rotated_points = cv2.warpAffine(aligned_points_mask, M, (cols, rows), flags=cv2.INTER_NEAREST)
+        _, rotated_points = cv2.threshold(rotated_points, 127, 255, cv2.THRESH_BINARY)
         overlap = np.sum((object_mask & rotated_points) > 0)
+        #print(a, overlap, angle)
 
         if max_overlap < overlap:
             max_overlap = overlap
             best_angle = angle
             optimal_rotate_image = rotated_points
+            #print(a, overlap, angle)
     return optimal_rotate_image, max_overlap, best_angle
 
 # Align the roated point image in a short range x(-bias_range ,bias_range) and y(-bias_range, bias_range) to further optimal the image alignment
-def test_bias(object_mask, points_mask, bias_range=15):
+def test_bias(object_mask, points_mask, bias_range=10):
     rows, cols = points_mask.shape
     max_overlap = 0
     optimal_bias = (0, 0)
     optimal_moved_image = None
+    a = np.sum((points_mask) > 0)
+    #print(a)
 
     # Test different biases
     for dx in range(-bias_range, bias_range + 1):
@@ -77,7 +83,7 @@ def test_bias(object_mask, points_mask, bias_range=15):
 
     return optimal_moved_image, max_overlap, optimal_bias
 
-def update_csv_by_filename(file_path, filename, optimal_angle, dx, dy):
+def update_csv_by_filename(file_path, filename, tx, ty, optimal_angle, dx, dy):
     try:
         # Read the existing data
         with open(file_path, 'r', newline='') as csvfile:
@@ -97,9 +103,11 @@ def update_csv_by_filename(file_path, filename, optimal_angle, dx, dy):
                     row.append('')
                 
                 # Update the relevant columns
-                row[2] = optimal_angle
-                row[3] = dx
-                row[4] = dy
+                row[2] = tx
+                row[3] = ty
+                row[4] = optimal_angle
+                row[5] = dx
+                row[6] = dy
                 updated = True
         
         # Write the updated data back to the file
@@ -116,9 +124,9 @@ def update_csv_by_filename(file_path, filename, optimal_angle, dx, dy):
         print(f"An error occurred: {e}")
 
 def main():
-    index1 = 'right'
-    id_index = '35wengyu'
-    size_index = '41m.png'
+    index1 = 'left'
+    id_index = '33anson'
+    size_index = '40m.png'
     side_index = index1 + '_mask'
     mask_dir = 'D:\\A\\A_Process_data\\AutoCAD'
     object_image_path = os.path.join(mask_dir, side_index, size_index)
@@ -154,10 +162,16 @@ def main():
     # Load the object mask
     object_image = cv2.imread(object_image_path, cv2.IMREAD_GRAYSCALE)
     resized_image = cv2.resize(object_image, (64, 64), interpolation=cv2.INTER_AREA)
-    object_edges = cv2.Canny(resized_image, 100, 200)
+    object_edges = cv2.Canny(resized_image, 50, 200)
+    '''
+    cv2.imshow('Edges', object_edges)
+    # Wait for a key press and close the windows
+    cv2.waitKey(0)
+    cv2.destroyAllWindows()
+    '''
     
-    object_mask = cv2.threshold(resized_image, 1, 255, cv2.THRESH_BINARY)[1]
-    object_mask_edge = cv2.threshold(object_edges, 1, 255, cv2.THRESH_BINARY)[1]
+    object_mask = cv2.threshold(resized_image, 50, 255, cv2.THRESH_BINARY)[1]
+    object_mask_edge = cv2.threshold(object_edges, 50, 255, cv2.THRESH_BINARY)[1]
 
     # Open the CSV file for writing
     with open(csv_file_path, 'w', newline='') as csvfile:
@@ -171,16 +185,19 @@ def main():
                 modified_image_path = os.path.join(modified_image_folder, 'modified_' + filename)
                 processed_points_image_path = os.path.join(processed_points_image_folder, filename)  # Path for the processed points image
 
-                # Load and preprocess the points image
+                                # Load and preprocess the points image
                 points_image = cv2.imread(points_image_path, cv2.IMREAD_GRAYSCALE)
-                points_mask = cv2.threshold(points_image, 230, 255, cv2.THRESH_BINARY)[1]
+                points_mask = cv2.threshold(points_image, 245, 255, cv2.THRESH_BINARY)[1]
 
                 # Align centers, rotate, and find optimal bias
                 aligned_points_mask, translation, centroid = align_centers(points_mask)
                 # Apply the same transformations to points_image
                 rows, cols = points_image.shape
+                rows, cols = points_image.shape
                 M = np.float32([[1, 0, translation[0]], [0, 1, translation[1]]])
                 aligned_points_image = cv2.warpAffine(points_image, M, (cols, rows))  # Alignment
+
+                #processed_points_image = aligned_points_image
                 optimal_angle = 0
                 optimal_translation = [0, 0]
                 current_overlap = 0
@@ -188,12 +205,17 @@ def main():
 
                 while(current_overlap < max_overlap):
                     current_overlap = max_overlap
+                    '''
+                    cv2.imshow('Edges', aligned_points_mask)
+                    # Wait for a key press and close the windows
+                    cv2.waitKey(0)
+                    cv2.destroyAllWindows()
+                    '''
                     optimal_rotate_image, max_overlap, best_angle = test_rotation(object_mask, aligned_points_mask, centroid)
                     
                     if 181 <= best_angle <= 359:
                         best_angle = best_angle - 360
                     optimal_angle += best_angle
-
                     M_rotate = cv2.getRotationMatrix2D(centroid, best_angle, 1)  # Rotation
                     rotated_points_image = cv2.warpAffine(aligned_points_image, M_rotate, (cols, rows))
 
@@ -202,15 +224,16 @@ def main():
                     optimal_translation[1] += optimal_bias[1]
 
                     M_translate = np.float32([[1, 0, optimal_bias[0]], [0, 1, optimal_bias[1]]])  # Bias
-                    processed_points_image = cv2.warpAffine(rotated_points_image, M_translate, (cols, rows))
+                    aligned_points_image = cv2.warpAffine(rotated_points_image, M_translate, (cols, rows))
 
                     centroid = calculate_centroid_of_white_mask(aligned_points_mask)
-
-                print(max_overlap, optimal_angle, optimal_translation)
+                
+                processed_points_image = aligned_points_image
+                #print(max_overlap, optimal_angle, optimal_translation)
 
                 # Overlay the object mask and the modified points mask for debugging
                 debug_image = cv2.cvtColor(object_mask_edge, cv2.COLOR_GRAY2BGR)
-                debug_image[:, :, 1] = np.maximum(debug_image[:, :, 1], aligned_points_mask)
+                debug_image[:, :, 1] = np.maximum(debug_image[:, :, 1], optimal_rotate_image)
 
                 # Save the debug image
                 cv2.imwrite(modified_image_path, debug_image)
@@ -226,9 +249,9 @@ def main():
                 print(f"Processed {points_image_path}")
                 
                 # Write the results to the CSV file
-                csv_writer.writerow([filename, optimal_angle, optimal_translation[0], optimal_translation[1]])
+                csv_writer.writerow([filename, translation[0], translation[1], optimal_angle, optimal_translation[0], optimal_translation[1]])
 
-                update_csv_by_filename(csv_file_name, os.path.splitext(filename)[0], optimal_angle, optimal_translation[0], optimal_translation[1])
+                update_csv_by_filename(csv_file_name, os.path.splitext(filename)[0], translation[0], translation[1], optimal_angle, optimal_translation[0], optimal_translation[1])
 
 
 if __name__ == '__main__':
